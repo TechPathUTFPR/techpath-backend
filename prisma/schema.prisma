@@ -1,0 +1,144 @@
+// schema.prisma
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: a URL de conexão não fica mais aqui.
+  // Ela é lida de DATABASE_URL em prisma.config.ts (CLI) e passada ao
+  // PrismaClient via driver adapter (src/prisma/prisma.service.ts).
+}
+
+model Usuario {
+  id              String      @id @default(uuid())
+  nome            String
+  email           String      @unique
+  senhaHash       String      @map("senha_hash")
+  dataNascimento  DateTime?   @map("data_nascimento")
+  criadoEm        DateTime    @default(now()) @map("criado_em")
+
+  // Relações
+  avaliacoes      Avaliacao[]
+
+  @@map("usuarios")
+}
+
+model Area {
+  id              String             @id @default(uuid())
+  nome            String
+  descricao       String?
+  icone           String?
+
+  // Relações
+  avaliacoesVencedoras Avaliacao[]       @relation("AreaResultado")
+  alternativasPeso     AlternativaPeso[]
+  resultados           ResultadoArea[]
+  trilhas              TrilhaConteudo[]
+
+  @@map("areas")
+}
+
+model Pergunta {
+  id          String        @id @default(uuid())
+  enunciado   String
+  ordem       Int
+  ativa       Boolean       @default(true)
+
+  // Relações
+  alternativas Alternativa[]
+  respostas    Resposta[]
+
+  @@map("perguntas")
+}
+
+model Alternativa {
+  id          String            @id @default(uuid())
+  texto       String
+  perguntaId  String            @map("pergunta_id")
+
+  // Relações
+  pergunta    Pergunta          @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+  pesos       AlternativaPeso[]
+  respostas   Resposta[]
+
+  @@map("alternativas")
+}
+
+// Tabela associativa N:N com payload (peso)
+model AlternativaPeso {
+  alternativaId String      @map("alternativa_id")
+  areaId        String      @map("area_id")
+  peso          Int
+
+  // Relações
+  alternativa   Alternativa @relation(fields: [alternativaId], references: [id], onDelete: Cascade)
+  area          Area        @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  // Chave primária composta
+  @@id([alternativaId, areaId])
+  @@map("alternativa_peso")
+}
+
+model Avaliacao {
+  id              String          @id @default(uuid())
+  usuarioId       String          @map("usuario_id")
+  iniciadaEm      DateTime        @default(now()) @map("iniciada_em")
+  concluidaEm     DateTime?       @map("concluida_em")
+  areaResultadoId String?         @map("area_resultado_id")
+
+  // Relações
+  usuario         Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  areaResultado   Area?           @relation("AreaResultado", fields: [areaResultadoId], references: [id])
+  respostas       Resposta[]
+  resultadosArea  ResultadoArea[]
+
+  @@map("avaliacoes")
+}
+
+model Resposta {
+  id             String      @id @default(uuid())
+  avaliacaoId    String      @map("avaliacao_id")
+  perguntaId     String      @map("pergunta_id")
+  alternativaId  String      @map("alternativa_id")
+
+  // Relações
+  avaliacao      Avaliacao   @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  pergunta       Pergunta    @relation(fields: [perguntaId], references: [id])
+  alternativa    Alternativa @relation(fields: [alternativaId], references: [id])
+
+  @@map("respostas")
+}
+
+// Guarda o ranking completo (Ex: 45% Dev, 30% QA...)
+model ResultadoArea {
+  avaliacaoId    String    @map("avaliacao_id")
+  areaId         String    @map("area_id")
+  pontuacao      Int
+  percentual     Float     // Pode usar Decimal dependendo da precisão desejada
+
+  // Relações
+  avaliacao      Avaliacao @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  area           Area      @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@id([avaliacaoId, areaId])
+  @@map("resultado_area")
+}
+
+model TrilhaConteudo {
+  id        String  @id @default(uuid())
+  areaId    String  @map("area_id")
+  titulo    String
+  url       String
+  tipo      String  // curso, vídeo, artigo...
+  nivel     String  // basico, intermediario, avancado...
+
+  // Relações
+  area      Area    @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@map("trilhas_conteudo")
+}
