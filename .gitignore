@@ -57,3 +57,5 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # TypeScript build info
 *.tsbuildinfo
+# Prisma Client gerado (npm run prisma:generate)
+/src/generated

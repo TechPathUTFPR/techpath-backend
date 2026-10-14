@@ -6,7 +6,7 @@ API backend do TechPath, construída com [NestJS](https://nestjs.com).
 
 - NestJS 12
 - TypeScript
-- PostgreSQL
+- PostgreSQL + [Prisma ORM 7](https://www.prisma.io) (driver adapter `@prisma/adapter-pg`)
 - Vitest (testes unitários e e2e)
 - oxlint / Prettier
 
@@ -29,13 +29,35 @@ POSTGRES_DB=techpath
 POSTGRES_PORT=5432
 
 NGINX_PORT=80
-```
 
-Ao rodar a API fora do Docker, defina também a `DATABASE_URL` apontando para o Postgres, por exemplo:
-
-```env
+# Usada pelo Prisma ao rodar a API fora do Docker
 DATABASE_URL=postgres://techpath:techpath@localhost:5432/techpath
+
+# Autenticação do administrador
+JWT_SECRET=troque_por_um_segredo
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=troque_esta_senha
 ```
+
+No Docker Compose a `DATABASE_URL` é montada automaticamente (aponta para o serviço `postgres`).
+
+## Banco de dados (Prisma)
+
+O schema fica em [prisma/schema.prisma](prisma/schema.prisma) (9 tabelas) e a conexão em [prisma.config.ts](prisma.config.ts).
+
+**Com Docker Compose** (`docker-compose up --build`) as tabelas são criadas automaticamente: o container gera o Prisma Client, executa `prisma db push` e só depois inicia a API.
+
+**Sem Docker**, com o Postgres no ar e a `DATABASE_URL` definida:
+
+```bash
+npm run db:setup   # prisma generate + prisma db push (cria as tabelas)
+```
+
+| Comando | Descrição |
+| --- | --- |
+| `npm run prisma:generate` | Gera o Prisma Client em `src/generated/prisma` (ignorado pelo git) |
+| `npm run db:push` | Cria/atualiza as tabelas a partir do schema |
+| `npm run db:setup` | `prisma:generate` + `db:push` |
 
 ## Como rodar localmente
 
@@ -47,7 +69,13 @@ npm install
 
 2. Ter um Postgres disponível (local ou via `docker-compose up postgres`) e configurar a `DATABASE_URL`.
 
-3. Rodar em modo desenvolvimento (watch):
+3. Criar as tabelas e gerar o client:
+
+```bash
+npm run db:setup
+```
+
+4. Rodar em modo desenvolvimento (watch):
 
 ```bash
 npm run start:dev
@@ -69,19 +97,6 @@ A API fica disponível em [http://localhost:3000](http://localhost:3000).
 | `npm run test:watch` | Executa os testes em modo watch |
 | `npm run test:cov` | Executa os testes com cobertura |
 | `npm run test:e2e` | Executa os testes e2e |
-
-## Endpoints de autenticação
-
-### Usuário (questionário)
-
-- `POST /users/register` — cadastra um novo usuário (`name`, `email`, `password`) e já retorna um `accessToken`.
-- `POST /users/login` — autentica um usuário existente (`email`, `password`) e retorna um `accessToken`.
-
-> Enquanto não há banco de dados configurado, os usuários cadastrados ficam em memória (`UsersService`) e são perdidos a cada restart da aplicação. O `JWT_SECRET` precisa estar definido no `.env`.
-
-### Administrador (painel admin)
-
-- `POST /auth/login` — autentica o administrador único configurado por `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
 
 ## Rodando com Docker Compose (backend + Postgres)
 
