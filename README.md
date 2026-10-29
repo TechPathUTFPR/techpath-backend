@@ -59,6 +59,39 @@ npm run db:setup   # prisma generate + prisma db push (cria as tabelas)
 | `npm run db:push` | Cria/atualiza as tabelas a partir do schema |
 | `npm run db:setup` | `prisma:generate` + `db:push` |
 
+## E-mail (SMTP)
+
+O módulo `src/mail` envia e-mails via SMTP com [nodemailer](https://nodemailer.com). Ele só cuida do **envio** (validação, retentativas, erros); o conteúdo (assunto, texto/HTML) é definido por quem chama.
+
+```ts
+constructor(private readonly mail: MailService) {}
+
+await this.mail.send({
+  to: 'usuario@example.com',
+  subject: 'Seu resultado do TechPath',
+  text: 'Olá!',          // ou html: '<p>Olá!</p>'
+  attachments: [{ filename: 'resultado.pdf', content: pdfBuffer }],
+});
+```
+
+O `MailModule` é global, então basta injetar o `MailService`. Erros possíveis: `MailValidationError` (pedido inválido, nada enviado), `MailDeliveryError` (o SMTP falhou; `transient` diz se vale tentar de novo), `MailNotConfiguredError` (sem `SMTP_HOST`).
+
+| Variável | Obrigatória | Padrão | Descrição |
+| --- | --- | --- | --- |
+| `SMTP_HOST` | não* | — | Sem ela o envio fica desativado (a API sobe normalmente) |
+| `MAIL_FROM` | sim, se há host | — | Remetente: `email@x.com` ou `Nome <email@x.com>` |
+| `SMTP_PORT` | não | 587 | |
+| `SMTP_SECURE` | não | `true` só na 465 | TLS direto |
+| `SMTP_REQUIRE_TLS` | não | false | Exige STARTTLS (recomendado em produção) |
+| `SMTP_USER` / `SMTP_PASS` | não | — | Devem ser informados juntos |
+| `SMTP_TLS_REJECT_UNAUTHORIZED` | não | true | Só desligue em testes locais |
+| `SMTP_TIMEOUT_MS` | não | 10000 | Conexão, saudação e socket |
+| `MAIL_MAX_RETRIES` / `MAIL_RETRY_DELAY_MS` | não | 2 / 500 | Retentativas só para falhas transitórias (backoff dobra a cada vez) |
+
+**Testar na prática:** `docker-compose up` sobe o [Mailpit](https://mailpit.axllent.org), um SMTP falso. Os e-mails enviados aparecem em http://localhost:8025.
+
+**Testes automatizados:** `npm test` (unitários do serviço e da config) e `npm run test:e2e` (inclui `test/mail.e2e-spec.ts`, que sobe um servidor SMTP em memória).
+
 ## Como rodar localmente
 
 1. Instalar as dependências:

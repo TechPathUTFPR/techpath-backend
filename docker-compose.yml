@@ -8,6 +8,9 @@ services:
     environment:
       PORT: ${PORT:-3000}
       DATABASE_URL: postgres://${POSTGRES_USER:-techpath}:${POSTGRES_PASSWORD:-techpath}@postgres:5432/${POSTGRES_DB:-techpath}
+      # Dentro do Docker o SMTP de desenvolvimento é o serviço "mailpit".
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     ports:
       - "${PORT:-3000}:3000"
     volumes:
@@ -16,6 +19,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   postgres:
     image: postgres:17-alpine
@@ -34,6 +39,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # SMTP falso para desenvolvimento: captura todos os e-mails, nada sai para a internet.
+  # Caixa de entrada em http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   techpath_postgres_data:
