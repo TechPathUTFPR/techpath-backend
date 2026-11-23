@@ -66,6 +66,9 @@ model Alternativa {
   pesos       AlternativaPeso[]
   respostas   Resposta[]
 
+  // Necessário para a FK composta de Resposta (alternativa pertence à pergunta)
+  @@unique([id, perguntaId])
+  @@index([perguntaId])
   @@map("alternativas")
 }
 
@@ -81,6 +84,7 @@ model AlternativaPeso {
 
   // Chave primária composta
   @@id([alternativaId, areaId])
+  @@index([areaId])
   @@map("alternativa_peso")
 }
 
@@ -97,6 +101,7 @@ model Avaliacao {
   respostas       Resposta[]
   resultadosArea  ResultadoArea[]
 
+  @@index([usuarioId])
   @@map("avaliacoes")
 }
 
@@ -109,8 +114,13 @@ model Resposta {
   // Relações
   avaliacao      Avaliacao   @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
   pergunta       Pergunta    @relation(fields: [perguntaId], references: [id])
-  alternativa    Alternativa @relation(fields: [alternativaId], references: [id])
+  // FK composta: garante que a alternativa escolhida pertence à pergunta respondida
+  alternativa    Alternativa @relation(fields: [alternativaId, perguntaId], references: [id, perguntaId])
 
+  // Uma resposta por pergunta em cada avaliação
+  @@unique([avaliacaoId, perguntaId])
+  @@index([perguntaId])
+  @@index([alternativaId])
   @@map("respostas")
 }
 
