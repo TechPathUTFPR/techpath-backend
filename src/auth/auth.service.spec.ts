@@ -65,7 +65,7 @@ describe('AuthService', () => {
       ).resolves.toEqual({ accessToken: 'access-token' });
 
       expect(jwtService.signAsync).toHaveBeenCalledWith(
-        { email: 'admin@example.com' },
+        { email: 'admin@example.com', role: 'admin' },
         { secret: 'test-secret' },
       );
     });
