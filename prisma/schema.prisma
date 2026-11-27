@@ -30,28 +30,45 @@ model Usuario {
 
 model Area {
   id              String             @id @default(uuid())
+  // Identificador fixo usado na API e nos códigos das perguntas (DEV, UX, QA...).
+  // Opcional no banco para não quebrar linhas já existentes; a API de admin só
+  // trabalha com áreas que tenham código.
+  codigo          String?            @unique
   nome            String
   descricao       String?
   icone           String?
+  ativa           Boolean            @default(true)
+  ordem           Int                @default(0)
 
   // Relações
   avaliacoesVencedoras Avaliacao[]       @relation("AreaResultado")
   alternativasPeso     AlternativaPeso[]
   resultados           ResultadoArea[]
   trilhas              TrilhaConteudo[]
+  perguntas            Pergunta[]
 
   @@map("areas")
 }
 
 model Pergunta {
   id          String        @id @default(uuid())
+  // Código estável (ex.: DEV-01). Não muda quando o texto é corrigido.
+  codigo      String?       @unique
   enunciado   String
   ordem       Int
   ativa       Boolean       @default(true)
+  // Cada pergunta pertence a uma única área e tem um peso (1,00 na v1).
+  areaId      String?       @map("area_id")
+  peso        Decimal       @default(1.00) @db.Decimal(4, 2)
+  criadoEm    DateTime      @default(now()) @map("criado_em")
+  atualizadoEm DateTime     @default(now()) @updatedAt @map("atualizado_em")
 
   // Relações
+  area         Area?         @relation(fields: [areaId], references: [id])
   alternativas Alternativa[]
   respostas    Resposta[]
+
+  @@index([areaId])
 
   @@map("perguntas")
 }

@@ -26,7 +26,7 @@ export class AuthService {
     }
 
     const accessToken = await this.jwtService.signAsync(
-      { email: adminEmail },
+      { email: adminEmail, role: 'admin' },
       { secret: jwtSecret },
     );
 
